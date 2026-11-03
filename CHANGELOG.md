@@ -1,6 +1,13 @@
 # Changelog
 
-## 1.0.0 (unreleased)
+Add entries under **Unreleased** in each PR. The release workflow moves them under the new version number.
+
+## Unreleased
+
+### Added
+- Release automation (`.github/workflows/release.yml`): pick patch, minor or major under Actions → release → Run workflow; or merge a PR that bumps the version in `.claude-plugin/plugin.json`. Either way the release is tagged and published with notes from this file.
+
+## 1.0.0 (2026-11-03)
 
 Rewrite of the earlier `privacy-audit` draft as **Ship-to-Store**.
 

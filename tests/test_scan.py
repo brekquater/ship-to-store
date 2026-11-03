@@ -523,7 +523,7 @@ class SkillPackage(unittest.TestCase):
         self.assertEqual("./", entry["source"])
         self.assertTrue((REPO / "skills" / plugin["name"] / "SKILL.md").exists())
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        self.assertEqual(plugin["version"], re.search(r"^## (\S+)", changelog, re.M).group(1))
+        self.assertEqual(plugin["version"], re.search(r"^## (\d+\.\d+\.\d+)", changelog, re.M).group(1))
         self.assertFalse((REPO / ".gitattributes").exists())  # directory validator rejects content-rewriting attributes
 
     def test_catalog_integrity(self):
