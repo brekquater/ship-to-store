@@ -1,0 +1,8 @@
+apply plugin: "com.android.application"
+android {
+    defaultConfig {
+        applicationId "com.fixture.rn"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+    }
+}

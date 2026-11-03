@@ -1,0 +1,14 @@
+{
+  "name": "brekquater",
+  "description": "Claude Code plugins by BREKQUATER",
+  "owner": {
+    "name": "BREKQUATER"
+  },
+  "plugins": [
+    {
+      "name": "ship-to-store",
+      "source": "./",
+      "description": "Get a mobile app ready for the App Store and Google Play: fix what can be fixed, then a short to-do list."
+    }
+  ]
+}

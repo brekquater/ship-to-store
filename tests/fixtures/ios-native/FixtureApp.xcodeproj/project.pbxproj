@@ -1,0 +1,11 @@
+// !$*UTF8*$!
+{
+	objects = {
+		ABC123 /* Debug */ = {
+			buildSettings = {
+				PRODUCT_BUNDLE_IDENTIFIER = com.fixture.ios;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+			};
+		};
+	};
+}

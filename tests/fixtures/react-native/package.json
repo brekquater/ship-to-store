@@ -1,0 +1,20 @@
+{
+  "name": "fixture-rn",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "react": "18.2.0",
+    "react-native": "0.74.0",
+    "@react-native-firebase/app": "20.0.0",
+    "@react-native-firebase/analytics": "20.0.0",
+    "@react-native-firebase/auth": "20.0.0",
+    "@react-native-google-signin/google-signin": "11.0.0",
+    "@sentry/react-native": "5.20.0",
+    "react-native-maps": "1.14.0",
+    "react-native-image-picker": "7.1.0",
+    "@react-native-async-storage/async-storage": "1.23.0"
+  },
+  "devDependencies": {
+    "jest": "29.7.0"
+  }
+}

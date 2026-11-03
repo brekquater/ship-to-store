@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Fixture Expo",
+    "slug": "fixture-expo",
+    "scheme": "fixtureexpo",
+    "ios": {
+      "bundleIdentifier": "com.fixture.expo",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We use your location to suggest nearby events.",
+        "NSUserTrackingUsageDescription": "Lets us show ads that are more relevant to you."
+      }
+    },
+    "android": {
+      "package": "com.fixture.expo",
+      "permissions": ["ACCESS_FINE_LOCATION", "CAMERA"],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
+    },
+    "plugins": [
+      "expo-camera",
+      ["expo-build-properties", { "android": { "targetSdkVersion": 36 } }]
+    ]
+  }
+}
