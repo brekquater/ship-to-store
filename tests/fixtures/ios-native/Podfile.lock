@@ -1,0 +1,10 @@
+PODS:
+  - FBSDKCoreKit (17.0.0):
+    - FBSDKCoreKit_Basics (= 17.0.0)
+  - FBSDKCoreKit_Basics (17.0.0)
+  - FirebaseCrashlytics (10.24.0):
+    - GoogleUtilities (~> 7.8)
+  - GoogleUtilities (7.13.0)
+
+DEPENDENCIES:
+  - FBSDKCoreKit (~> 17.0)

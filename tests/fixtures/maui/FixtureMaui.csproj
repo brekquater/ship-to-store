@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-android;net8.0-ios</TargetFrameworks>
+    <UseMaui>true</UseMaui>
+    <ApplicationId>com.fixture.maui</ApplicationId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Sentry.Maui" Version="4.0.0" />
+    <PackageReference Include="CommunityToolkit.Maui" Version="9.0.0" />
+  </ItemGroup>
+</Project>

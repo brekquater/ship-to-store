@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+ship-to-store-report/
+.DS_Store
