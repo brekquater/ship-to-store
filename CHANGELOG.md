@@ -5,6 +5,7 @@
 Rewrite of the earlier `privacy-audit` draft as **Ship-to-Store**.
 
 ### Added
+- Claude Code plugin packaging: `.claude-plugin/plugin.json` and a marketplace (`brekquater`) in the same repo. Install with `claude plugin marketplace add brekquater/ship-to-store` then `claude plugin install ship-to-store@brekquater`.
 - `scripts/scan.py`: offline, stdlib-only scanner. Covers framework detection (React Native, Expo, Flutter, native Android/iOS, Capacitor/Ionic, Cordova, .NET MAUI, web), dependency parsing (npm/yarn/pnpm, pub, CocoaPods, SwiftPM, Gradle + version catalogs, NuGet, pip), SDK identification via `sdk_catalog.json`, Android manifest / Info.plist / entitlements / privacy-manifest / Expo config parsing, sensitive-API and data-collection rules, endpoint extraction with redaction, secret detection (values never stored), store-readiness checks, data-category leads mapped to Apple and Play labels, compact summary output, `--reuse` cache and `--show` drill-down.
 - `scripts/verify_report.py`: blocks secret-like values in generated documents, validates `data-inventory.json`, flags guarantee-like wording, counts open placeholders.
 - References for Apple App Store, Google Play, jurisdictions (with check dates), consent mechanisms, output formats, evidence rules, security, and optional runtime checks.

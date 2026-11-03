@@ -514,6 +514,18 @@ class SkillPackage(unittest.TestCase):
             if anchor:
                 self.assertIn(anchor, anchors(self.SKILL / path), ref)
 
+    def test_plugin_packaging(self):
+        import re
+        plugin = json.loads((REPO / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        market = json.loads((REPO / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        entry = market["plugins"][0]
+        self.assertEqual(plugin["name"], entry["name"])  # install id and skill prefix must agree
+        self.assertEqual("./", entry["source"])
+        self.assertTrue((REPO / "skills" / plugin["name"] / "SKILL.md").exists())
+        changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+        self.assertEqual(plugin["version"], re.search(r"^## (\S+)", changelog, re.M).group(1))
+        self.assertFalse((REPO / ".gitattributes").exists())  # directory validator rejects content-rewriting attributes
+
     def test_catalog_integrity(self):
         cat = json.loads((self.SKILL / "scripts" / "sdk_catalog.json").read_text(encoding="utf-8"))
         ids = [s["id"] for s in cat["sdks"]]

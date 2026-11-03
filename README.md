@@ -8,13 +8,30 @@ Ship-to-Store is a **Claude Code Skill** that works on your app repository **loc
 
 ## Requirements
 
-- [Claude Code](https://code.claude.com/)
+- [Claude Code](https://code.claude.com/). Built for Claude Code, where it can read and fix your local repo. In claude.ai chat it has no local repo to work on.
 - Python 3.9 or newer (`python3`; on Windows, `python`). Standard library only; nothing to `pip install`.
-- git, to download the skill
 
 ## Install
 
-The skill is the folder `skills/ship-to-store/`. Copy that folder, not the whole repository, into one of Claude Code's skill locations.
+### Option A: plugin (recommended, gets updates)
+
+In your shell:
+
+```bash
+claude plugin marketplace add brekquater/ship-to-store
+```
+
+```bash
+claude plugin install ship-to-store@brekquater
+```
+
+Or inside a Claude Code session (v2.1.275+): `/plugin install ship-to-store --marketplace brekquater/ship-to-store`.
+
+Run it with `/ship-to-store:ship-to-store`, because plugin commands carry the plugin name as a prefix. Update with `claude plugin update ship-to-store@brekquater`.
+
+### Option B: copy the skill folder
+
+This gives you the short `/ship-to-store` command, but no automatic updates. The skill is the folder `skills/ship-to-store/`. Copy that folder, not the whole repository, into one of Claude Code's skill locations.
 
 **Project-level** (only this app; commit it so collaborators get it). Run from your app's root:
 
@@ -51,6 +68,8 @@ In Claude Code, from your app's root:
 ```text
 /ship-to-store
 ```
+
+With the plugin install, type `/ship-to-store:ship-to-store` instead. The arguments are the same.
 
 Variants:
 
@@ -164,6 +183,15 @@ python3 skills/ship-to-store/scripts/verify_report.py --dir path/to/docs      # 
 - Platform rules and laws change. References record the date each rule was checked (currently 2026-11-03). Claude re-checks official pages when web access is available and otherwise says the rule was not re-verified.
 - Jurisdiction coverage is limited to GDPR, UK GDPR/PECR, ePrivacy, CCPA/CPRA, COPPA, India DPDP and LGPD triggers. Everything else is reported as *not assessed*.
 - No guarantee of App Store / Google Play approval or legal compliance.
+
+## What it runs and sends
+
+| | |
+|---|---|
+| **Runs** | `scripts/scan.py` and `scripts/verify_report.py` with your local Python (standard library only). After making fixes, Claude may run your project's existing typecheck, lint and test scripts, and tells you first. Nothing is installed, built or executed from your app. |
+| **Reads** | Files in the app folder you point it at, skipping `node_modules`, build output and other vendor or generated folders. |
+| **Writes** | Only the fixes it makes in your repo (left uncommitted), plus its scan cache under your OS temp folder (`<temp>/ship-to-store/`). It writes documents only if you ask. |
+| **Network** | The scripts make no network calls. Claude may look up public Apple, Google, legislation and regulator pages to re-check a rule, and never sends your code, secrets or scan results anywhere. |
 
 ## Security and privacy
 

@@ -2,6 +2,7 @@ name: tests
 
 on:
   push:
+    branches: [master]
   pull_request:
 
 permissions:
@@ -14,8 +15,13 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python: ["3.9", "3.13"]
-        exclude:
-          - os: macos-latest  # arm64 runners have no 3.9 build
+        exclude:  # no 3.9 builds for arm64 macOS or Ubuntu 26.04 (ubuntu-latest)
+          - os: macos-latest
+            python: "3.9"
+          - os: ubuntu-latest
+            python: "3.9"
+        include:
+          - os: ubuntu-24.04
             python: "3.9"
     runs-on: ${{ matrix.os }}
     steps:

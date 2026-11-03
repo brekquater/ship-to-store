@@ -30,6 +30,12 @@ Edit `skills/ship-to-store/scripts/sdk_catalog.json`:
 
 Rules change. When you update a reference file, link the **official** source (Apple, Google, legislation, regulator) and update its "checked" date. Do not cite blogs as authority.
 
+## Release
+
+1. Bump `version` in `.claude-plugin/plugin.json`, and add a matching `## <version>` heading to `CHANGELOG.md` (a test checks they agree). Without a version bump, `claude plugin update` keeps users on the old copy.
+2. Run `claude plugin validate --strict .` and the tests.
+3. Merge to `master`. Plugin users get the release with `claude plugin update ship-to-store@brekquater`. A directory listing picks up the new version from GitHub.
+
 ## Test data
 
 Fixtures must be synthetic. Never commit real credentials, personal data, or secret-shaped strings. Tests build fake secrets at runtime by string concatenation.
