@@ -214,6 +214,11 @@ Synthetic fixtures for React Native, Expo, Flutter, native Android, native iOS, 
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) (adding SDKs, updating rules with official sources) and [CHANGELOG.md](CHANGELOG.md).
 
-## License
+## License, privacy and terms
 
 MIT, as chosen by the repository owner. See [LICENSE](LICENSE).
+
+- [Privacy Policy](legal/privacy-policy.md): BREKQUATER receives nothing from your use of Ship-to-Store.
+- [Terms of Use](legal/terms.md): not legal advice, no guarantee of store approval, review every change.
+
+Both are drafts for legal review; [legal/traceability.md](legal/traceability.md) shows where each statement comes from.
