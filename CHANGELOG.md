@@ -4,6 +4,8 @@ Add entries under **Unreleased** in each PR. The release workflow moves them und
 
 ## Unreleased
 
+## 1.0.1 (2026-11-04)
+
 ### Added
 - Release automation (`.github/workflows/release.yml`): pick patch, minor or major under Actions → release → Run workflow; or merge a PR that bumps the version in `.claude-plugin/plugin.json`. Either way the release is tagged and published with notes from this file.
 

@@ -1,7 +1,7 @@
 {
   "name": "ship-to-store",
   "displayName": "Ship-to-Store",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Get a mobile app ready for the App Store and Google Play: a local, offline scan finds store blockers (permissions, purpose strings, privacy manifests, target API, account deletion, consent, SDK data collection, secrets), Claude fixes what it safely can and gives a short numbered to-do list with App Privacy and Data safety answers.",
   "author": {
     "name": "BREKQUATER",
