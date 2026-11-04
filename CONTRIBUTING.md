@@ -32,9 +32,17 @@ Rules change. When you update a reference file, link the **official** source (Ap
 
 ## Release
 
-1. Bump `version` in `.claude-plugin/plugin.json`, and add a matching `## <version>` heading to `CHANGELOG.md` (a test checks they agree). Without a version bump, `claude plugin update` keeps users on the old copy.
-2. Run `claude plugin validate --strict .` and the tests.
-3. Merge to `master`. Plugin users get the release with `claude plugin update ship-to-store@brekquater`. A directory listing picks up the new version from GitHub.
+Every PR adds its changes under `## Unreleased` in `CHANGELOG.md`. Releases are automated by `.github/workflows/release.yml`:
+
+- **Usual way:** GitHub → **Actions → release → Run workflow**, then pick **patch** (fixes), **minor** (new checks, SDKs or features) or **major** (breaking changes to the skill's behaviour or scripts). The workflow:
+  1. runs the tests;
+  2. bumps `version` in `.claude-plugin/plugin.json`;
+  3. moves the Unreleased entries under the new version;
+  4. commits that to `master`;
+  5. tags `vX.Y.Z` and publishes a GitHub release with those entries as notes.
+- **Or in a PR:** bump `version` in `plugin.json` yourself and rename `## Unreleased` to `## X.Y.Z (date)`. Merging it to `master` tags and publishes that version.
+
+Merges that don't change the version never release. Plugin users get a release with `claude plugin update ship-to-store@brekquater`; without a version bump they keep the old copy. A directory listing picks up the new version from GitHub. Before a release that touches the manifest, run `claude plugin validate --strict .` locally (CI doesn't have the `claude` CLI).
 
 ## Test data
 

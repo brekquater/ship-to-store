@@ -1,0 +1,61 @@
+name: release
+
+# Two ways to release:
+#  - Actions > release > Run workflow, pick patch/minor/major: bumps plugin.json, turns
+#    CHANGELOG "## Unreleased" into the new version, commits to master, tags and publishes.
+#  - Merge a PR that changes the version in .claude-plugin/plugin.json: tags and publishes
+#    that version. Merges that don't touch the version never release.
+on:
+  push:
+    branches: [master]
+    paths: [".claude-plugin/plugin.json"]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version part to bump
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Unit tests
+        run: python -m unittest discover -s tests
+      - name: Bump version and changelog
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          version="$(python .github/release.py bump "$BUMP")"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Release v$version"
+          git push origin HEAD:master
+      - name: Tag and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(python .github/release.py version)"
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            echo "v$version is already released; nothing to do."
+            exit 0
+          fi
+          python .github/release.py notes "$version" > release-notes.md
+          gh release create "v$version" --target "$(git rev-parse HEAD)" \
+            --title "Ship-to-Store v$version" --notes-file release-notes.md
