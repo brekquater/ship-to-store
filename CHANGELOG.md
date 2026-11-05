@@ -4,6 +4,9 @@ Add entries under **Unreleased** in each PR. The release workflow moves them und
 
 ## Unreleased
 
+### Added
+- Privacy Policy and Terms of Use (`legal/`, version 1.0, drafts for legal review), with an evidence table, linked from the README.
+
 ## 1.0.1 (2026-11-04)
 
 ### Added
