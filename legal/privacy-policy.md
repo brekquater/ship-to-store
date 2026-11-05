@@ -1,4 +1,4 @@
-<!-- DRAFT FOR LAWYER REVIEW, not legal advice. Every statement is traced to the code or README in legal/traceability.md. Bump the version and date on every change. The Brekquater website copies this file (brekquater-front: npm run sync-legal). -->
+<!-- DRAFT FOR LAWYER REVIEW, not legal advice. Every statement is traced to the code or README in legal/traceability.md. Bump the version and date on every change. The Brekquater website (brekquater-front src/app/legal/product-legal.ts) publishes a copy: update it when this changes. -->
 
 # Ship-to-Store Privacy Policy
 
