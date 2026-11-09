@@ -4,6 +4,8 @@ Add entries under **Unreleased** in each PR. The release workflow moves them und
 
 ## Unreleased
 
+## 1.0.2 (2026-11-09)
+
 ### Added
 - Privacy Policy and Terms of Use (`legal/`, version 1.0, drafts for legal review), with an evidence table, linked from the README.
 - Google Play coverage: 14 policy areas with evidence-based statuses (a one-line count in chat; "policy matrix" for the full table), and rules for ads, Play Billing, user-generated content, restricted content, code delivery and review access, read from Google's pages on 2026-11-09.
