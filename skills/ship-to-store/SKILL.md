@@ -38,7 +38,7 @@ Relative to this skill's base directory. Use `python3` (`python` on Windows). St
    - A target API below the store minimum when it is a single config value: raise it, and tell them to test.
    - `http://` URLs where the same host is already used over `https://`; release-build cleartext or ATS exceptions that nothing needs.
    - A privacy policy that exists only in-app: make the same text publishable (e.g. a static page generated from the source), without duplicating it.
-5. **Ask first (one compact list), then fix on a yes:** new dependencies (e.g. secure storage); new user-facing flows (account deletion, consent or ATT prompts, Sign in with Apple); removing SDKs or features; moving secrets (always tell them to **rotate** a leaked key); anything that needs business facts (entity, contact, markets, user age, retention).
+5. **Ask first (one compact list), then fix on a yes:** new dependencies (e.g. secure storage); enabling R8; new user-facing flows (account deletion, consent or ATT prompts, Sign in with Apple); removing SDKs or features; moving secrets (always tell them to **rotate** a leaked key); anything that needs business facts (entity, contact, markets, user age, retention).
 6. **Verify.** Re-run `scan.py --reuse` and confirm the fixed checks are gone. Run the project's own checks per rule 2. Fix anything you broke.
 7. **Report in chat** using the format below. Nothing else.
 
@@ -52,7 +52,8 @@ Relative to this skill's base directory. Use `python3` (`python` on Windows). St
 **Fixed (N)** — one line each: what + file:line
 **You need to do (N)** — numbered, in submission order, grouped under: Blockers · Store console · Vendor consoles (e.g. AdMob) · Before an iOS/Android release later
 **Need your answer** — only questions that block something, numbered
-**Store answers** — detected platforms only, ≤8 lines: data type → collected/shared, purpose, optional
+**Store answers** — detected platforms only, ≤8 lines: data type → collected/shared, purpose, optional; mark vendor-doc-only items "(confirm)"
+**Play policy** (Android) — one line: counts per status, from `references/google-play.md`
 Not checked: one line (static scan limits, e.g. runtime traffic)
 ```
 

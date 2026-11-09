@@ -6,6 +6,15 @@ Add entries under **Unreleased** in each PR. The release workflow moves them und
 
 ### Added
 - Privacy Policy and Terms of Use (`legal/`, version 1.0, drafts for legal review), with an evidence table, linked from the README.
+- Google Play coverage: 14 policy areas with evidence-based statuses (a one-line count in chat; "policy matrix" for the full table), and rules for ads, Play Billing, user-generated content, restricted content, code delivery and review access, read from Google's pages on 2026-11-09.
+- Scanner checks: merged release manifest from an earlier build (permissions added by SDKs, real target API), debug-signed or debuggable release builds, disabled TLS validation, dynamic code loading, interstitial placements, user-generated content without report or block code, placeholder text and restricted-category wording.
+- More Play release checks: R8 and resource shrinking settings (including Expo and Gradle-property setups), fastlane listing limits and prohibited claims, and a reminder of the closed-testing requirement for new personal accounts.
+
+### Changed
+- Store answers that come only from vendor documentation are marked "(confirm)".
+
+### Fixed
+- Removed the claim that Play Console has a separate Advertising ID declaration; Google's App content page does not list one.
 
 ## 1.0.1 (2026-11-04)
 

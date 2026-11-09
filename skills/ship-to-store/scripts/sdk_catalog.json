@@ -3,7 +3,7 @@
  "meta": {
   "note": "possible_data lists what an SDK CAN collect in common configurations, per vendor documentation. It is not proof that this app collects it. Verify against the vendor's current data-disclosure page and the app's configuration.",
   "docs_note": "docs URLs point to vendor privacy/data pages; they were not individually re-fetched for this release. Verify at audit time.",
-  "play_target_sdk": {"value": 36, "effective": "2026-08-31", "applies_to": "new apps and app updates (phone/tablet)", "source": "https://developer.android.com/google/play/requirements/target-sdk", "checked": "2026-11-03"}
+  "play_target_sdk": {"value": 36, "effective": "2026-08-31", "applies_to": "new apps and app updates (phone/tablet)", "source": "https://developer.android.com/google/play/requirements/target-sdk", "checked": "2026-11-09"}
  },
  "apple_privacy_manifest_sdks": {
   "source": "https://developer.apple.com/support/third-party-SDK-requirements/",
@@ -237,6 +237,9 @@
   {"id": "intercom", "vendor": "Intercom", "category": ["support", "messaging"], "tracking": "no",
    "match": {"npm": ["@intercom/*"], "pub": ["intercom_flutter"], "pod": ["Intercom"], "spm": ["intercom-ios"], "maven": ["io.intercom.android:*"]},
    "domains": ["intercom.io", "intercomcdn.com"], "possible_data": ["name", "email", "user_id", "messages", "user_content", "device_id"], "docs": "https://www.intercom.com/legal/privacy"},
+  {"id": "chat-sdk", "vendor": "In-app chat SDK (Stream, Sendbird, Gifted Chat)", "category": ["ugc", "messaging"], "tracking": "no",
+   "match": {"npm": ["stream-chat", "stream-chat-react-native", "stream-chat-expo", "@sendbird/*", "sendbird", "react-native-gifted-chat"], "pub": ["stream_chat_flutter", "sendbird_chat_sdk", "flutter_chat_ui"], "pod": ["StreamChat", "SendbirdChatSDK"], "maven": ["io.getstream:*", "com.sendbird.sdk:*"]},
+   "domains": ["getstream.io", "sendbird.com"], "possible_data": ["messages", "user_id", "user_content"], "docs": "verify per provider"},
   {"id": "zendesk", "vendor": "Zendesk", "category": ["support", "messaging"], "tracking": "no",
    "match": {"npm": ["react-native-zendesk-messaging", "react-native-zendesk-chat"], "pod": ["ZendeskSDKMessaging", "ZendeskSupportSDK"], "maven": ["zendesk.messaging:*", "com.zendesk:*"]},
    "domains": ["zendesk.com", "zdassets.com"], "possible_data": ["name", "email", "user_id", "messages", "user_content"], "docs": "https://www.zendesk.com/company/agreements-and-terms/privacy-notice/"}
