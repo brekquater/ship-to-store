@@ -16,6 +16,7 @@ The default output is the chat report in SKILL.md. Write files **only when the d
 | `app-store-disclosures.md` | "App Privacy answers" (iOS only) | Business owner |
 | `google-play-data-safety.md` | "Data safety answers" (Android only) | Business owner |
 | `consent-recommendations.md` | "consent plan" | Business owner + legal |
+| `google-play-policy-matrix.md` | "policy matrix": one row per area in `google-play.md`, with policy, source URL, status, severity, file:line, evidence, fix, whether fixed, and test evidence | Developer |
 | `privacy-policy-draft.md` | "privacy policy" when none exists (see `privacy-policy.md`) | Business owner + legal |
 
 ## audit-report.md

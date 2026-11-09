@@ -140,7 +140,7 @@ ANDROID_PERMS = {
     "USE_FULL_SCREEN_INTENT": (None, "Full-screen intent: declaration required on Android 14+ unless calling/alarm app"),
     "BIND_ACCESSIBILITY_SERVICE": (None, "Accessibility API use is restricted: declaration and review"),
     "BIND_VPN_SERVICE": (None, "VpnService is restricted to VPN core functionality"),
-    "AD_ID": ("advertising_id", "Declare Advertising ID use in Play Console (App content)"),
+    "AD_ID": ("advertising_id", None),
 }
 ANDROID_PREFIX_PERMS = {
     "FOREGROUND_SERVICE_": (None, "Foreground service types require a Play Console declaration"),
@@ -272,6 +272,18 @@ RULES = [
      R(r"ConsentInformation|UserMessagingPlatform|requestConsentInfoUpdate|ConsentForm|AdsConsent\.|gatherConsent|canRequestAds|PrivacyOptionsRequirementStatus|setConsent\(|setAnalyticsCollectionEnabled|setCrashlyticsCollectionEnabled|OneTrust|Didomi|Usercentrics|Cookiebot|gdprApplies|IABTCF_|optOut\(|opt_out|consentGiven|hasConsent"), None),
     ("ai_call", "data_collection", None, "user_content", "medium",
      R(r"new OpenAI\(|OpenAI\(api_key|chat\.completions\.create|new Anthropic\(|messages\.create\(|GenerativeModel\(|generateContent\(|getGenerativeModel"), None),
+    # Google Play policy leads; each needs a human or Claude to read the cited code
+    ("insecure_tls", "risk", None, None, "high",
+     R(r"(handler|sslErrorHandler)\??\.proceed\(\)|ALLOW_ALL_HOSTNAME_VERIFIER|NoopHostnameVerifier|checkServerTrusted\([^)]*\)[^{=]*(\{\s*\}|=\s*Unit)|hostnameVerifier\s*[({]\s*\w+\s*,\s*\w+\s*->\s*true|badCertificateCallback\s*=\s*\([^)]*\)\s*(=>\s*true|\{\s*return true)|rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*['\"]?0"), None),
+    ("dynamic_code", "risk", None, None, "medium",
+     R(r"\b(DexClassLoader|InMemoryDexClassLoader|PathClassLoader)\b|DexFile\.loadDex|System\.load\("), None),
+    ("placeholder_content", "risk", None, None, "low", R(r"lorem ipsum|coming soon", re.I), None),
+    ("interstitial_show", "signal", None, None, "low", R(r"[iI]nterstitial\w*\??\.show\(|[sS]howInterstitial\w*\("), None),
+    ("ugc_features", "signal", None, "user_content", "low",
+     R(r"\b(createPost|submitPost|uploadPost|postComment|addComment|submitComment|createComment|sendChatMessage|sendDirectMessage)\s*\(|\bGiftedChat\b|\bStreamChat\b"), None),
+    ("ugc_moderation", "signal", None, None, "medium", R(r"reportUser|reportContent|reportPost|reportComment|blockUser|flagContent"), None),
+    ("restricted_category", "signal", None, None, "low",
+     R(r"\b(real[- ]money|sports?[- ]?betting|casino|personal[- ]loan|crypto[- ]?wallet|walletconnect)\b", re.I), None),
     # Apple required-reason API categories (native iOS code only)
     ("rr_user_defaults", "required_reason_api", None, None, "high", R(r"\bUserDefaults\b|\bNSUserDefaults\b"), SWIFT_OBJC),
     ("rr_file_timestamp", "required_reason_api", None, None, "medium",
@@ -425,11 +437,14 @@ class Scan:
         self.android_perms = []
         self.ios_keys = []
         self.expo = {}
+        self.expo_build_flags = {}
+        self.gradle_props = {}
         self.platform = {"ios_plists": [], "entitlements": [], "privacy_manifests": [], "android_manifests": [],
                          "ats": [], "background_modes": [], "url_schemes": [], "associated_domains": [],
                          "app_links": [], "deep_links": [], "exported_components": [], "cleartext": [],
                          "allow_backup": [], "foreground_services": [], "firebase_config": [], "export_compliance": [],
-                         "android_meta_data": [], "target_sdk": [], "min_sdk": [], "maui": []}
+                         "android_meta_data": [], "target_sdk": [], "min_sdk": [], "maui": [],
+                         "release_config": [], "merged_manifest": None, "release_optimization": [], "store_listing": None}
         self.signals = {}
         self.signal_counts = {}
         self.endpoints = {}
@@ -735,6 +750,26 @@ def gradle_values(s, f, text):
         s.identifiers.setdefault("android_application_id", m.group(1))
 
 
+# the release block of buildTypes, Groovy (`release {`) or Kotlin DSL (`getByName("release") {`)
+RELEASE_BLOCK = r"""\brelease\b["')\s]*\{[^{}]*"""
+RELEASE_DEBUG_SIGNING = R(RELEASE_BLOCK + r"""signingConfig\s*=?\s*signingConfigs\.(debug\b|getByName\(["']debug["']\))""")
+RELEASE_DEBUGGABLE = R(RELEASE_BLOCK + r"""\b(isD|d)ebuggable\s*=?\s*true""")
+RELEASE_FLAGS = (("code shrinking (minify)", R(RELEASE_BLOCK + r"\b(?:isM|m)inifyEnabled\s*=?\s*([\w.]+)"), "enableMinifyInReleaseBuilds"),
+                 ("resource shrinking", R(RELEASE_BLOCK + r"\b(?:isS|s)hrinkResources\s*=?\s*([\w.]+)"), "enableShrinkResourcesInReleaseBuilds"))
+
+
+def record_release_flag(s, f, text, flag, m):
+    """Store a release flag: a literal, or a variable with the Gradle property that sets it."""
+    raw = m.group(1).split(".")[0]
+    entry = {"flag": flag, "path": f.rel, "line": text.count("\n", 0, m.start(1)) + 1,
+             "value": raw == "true" if raw in ("true", "false") else None, "prop": None}
+    if entry["value"] is None:
+        d = re.search(r"""def\s+%s\s*=\s*\(?\s*(?:findProperty\(['"]([\w.]+)['"]\)\s*\?:\s*)?['"]?(true|false)""" % re.escape(raw), text)
+        if d:
+            entry["prop"], entry["value"] = d.group(1), d.group(2) == "true"
+    s.platform["release_optimization"].append(entry)
+
+
 def h_gradle(s, f, data, text):
     for i, line in enumerate(text.splitlines(), 1):
         m = GRADLE_DEP.match(line)
@@ -747,11 +782,21 @@ def h_gradle(s, f, data, text):
     if "com.google.gms.google-services" in text:
         s.platform["firebase_config"].append("%s:%s" % (f.rel, line_of(text, "com.google.gms.google-services")))
     gradle_values(s, f, text)
+    for problem, rx in (("signed with the debug key", RELEASE_DEBUG_SIGNING), ("debuggable", RELEASE_DEBUGGABLE)):
+        m = rx.search(text)
+        if m:
+            s.platform["release_config"].append({"problem": problem, "path": f.rel, "line": text.count("\n", 0, m.start()) + 1})
+    if "com.android.application" in text and not re.search(r"optimization\s*\{[^{}]*enable\s*=\s*true", text):  # AGP 9.3+ DSL
+        for flag, rx, _key in RELEASE_FLAGS:
+            m = rx.search(text)
+            if m:
+                record_release_flag(s, f, text, flag, m)
 
 
 def h_properties(s, f, data, text):
     if f.name == "gradle.properties":
         gradle_values(s, f, text)
+        s.gradle_props.update((k, v == "true") for k, v in re.findall(r"^\s*([\w.]+)\s*=\s*(true|false)\s*$", text, re.M))
 
 
 def h_versions_toml(s, f, data, text):
@@ -970,6 +1015,8 @@ def h_app_json(s, f, data, text):
                 tsdk = (p[1].get("android") or {}).get("targetSdkVersion")
                 if tsdk:
                     s.platform["target_sdk"].append({"value": tsdk, "path": f.rel, "line": line_of(text, "targetSdkVersion")})
+                s.expo_build_flags.update((k, v) for k, v in (p[1].get("android") or {}).items()
+                                          if k in ("enableMinifyInReleaseBuilds", "enableShrinkResourcesInReleaseBuilds") and isinstance(v, bool))
     s.expo = {"path": f.rel, "plugins": plugins[:40], "sdkVersion": expo.get("sdkVersion"),
               "android_permissions_declared": bool(android.get("permissions")),
               "platforms": expo.get("platforms") if isinstance(expo.get("platforms"), list) else None}
@@ -982,6 +1029,7 @@ def h_app_config_js(s, f, data, text):
     s.framework("expo", f.rel)
     s.expo.setdefault("path", f.rel)
     s.expo.setdefault("note", "app.config.js/ts is code; values were not evaluated")
+    s.expo_build_flags.update((k, v == "true") for k, v in re.findall(r"(enable(?:Minify|ShrinkResources)InReleaseBuilds)\s*:\s*(true|false)", text))
 
 
 def h_capacitor(s, f, data, text):
@@ -1339,6 +1387,9 @@ def build_checks(s, sdks, apple_sdks, plats, caps):
             check(c, "PLAY_SENSITIVE_PERMISSIONS", "attention", "Permissions with Play policy declarations or restrictions",
                   ["%s (%s:%s): %s" % (strip_android(p["name"]), p["path"], p["line"], p["play_policy"]) for p in restricted], G + "#sensitive-permissions")
         tsdk = [t for t in s.platform["target_sdk"] if isinstance(t["value"], int)]
+        merged = s.platform["merged_manifest"]
+        if not tsdk and merged and merged["target_sdk"] and not merged["stale"]:
+            tsdk = [{"value": merged["target_sdk"], "path": merged["path"] + " (last release build)", "line": merged["target_sdk_line"]}]
         if not tsdk:  # RN/Expo default comes from the installed react-native's version catalog
             rn_toml = "node_modules/react-native/gradle/libs.versions.toml"
             try:
@@ -1362,7 +1413,7 @@ def build_checks(s, sdks, apple_sdks, plats, caps):
         ads = cats & {"advertising", "attribution"} or live(s, "advertising_id")
         if ads:
             adid = [p for p in s.android_perms if strip_android(p["name"]) == "AD_ID"]
-            check(c, "PLAY_ADVERTISING_ID", "info", "Ads/attribution code present; answer the Advertising ID declaration in Play Console (AD_ID permission %s)"
+            check(c, "PLAY_ADVERTISING_ID", "info", "Ads/attribution code present: the Ads declaration is yes, and Data safety must cover the Advertising ID (AD_ID permission %s)"
                   % ("removed" if adid and adid[0]["removed"] else "declared" if adid else "not declared in source manifests; SDKs may merge it"),
                   [p["path"] for p in adid][:2], G + "#advertising-id")
         if s.platform["cleartext"]:
@@ -1376,6 +1427,33 @@ def build_checks(s, sdks, apple_sdks, plats, caps):
             check(c, "ANDROID_EXPORTED_COMPONENTS", "info", "Exported components without a permission; confirm they are meant to be public", s.platform["exported_components"])
         if s.platform["foreground_services"]:
             check(c, "PLAY_FOREGROUND_SERVICE", "attention", "Foreground service types need a Play Console declaration", s.platform["foreground_services"], G + "#sensitive-permissions")
+        if s.platform["release_config"]:
+            generated = tuple(d + "/" for d in s.coverage.get("generated_native_dirs", []))
+            real = [x for x in s.platform["release_config"] if not x["path"].startswith(generated)]
+            check(c, "PLAY_RELEASE_CONFIG", "attention" if real else "info",
+                  "Release build type is misconfigured; Play rejects debug-signed and debuggable uploads" if real else
+                  "Release config in a generated folder uses debug settings; confirm EAS or your CI applies real signing",
+                  ["%s (%s:%s)" % (x["problem"], x["path"], x["line"]) for x in (real or s.platform["release_config"])], G + "#release-configuration")
+        off = release_optimization_off(s)
+        if off:
+            check(c, "ANDROID_R8_NOT_ENABLED", "info", "Release build lacks optimization Google recommends; enabling it can break reflection-based code, so test a release build",
+                  off, G + "#release-configuration")
+        check(c, "PLAY_TESTING_REQUIREMENT", "info", "Personal developer accounts created after 2023-11-13 need a closed test (12 testers opted in for 14 days) before production; use the pre-launch report and real devices",
+              [], G + "#testing-before-production")
+        listing = s.platform["store_listing"]
+        if listing and listing["problems"]:
+            check(c, "PLAY_STORE_LISTING", "attention" if any("limit" in p for p in listing["problems"]) else "info",
+                  "Store listing text may break Play's Metadata policy", listing["problems"], G + "#store-listing")
+        ugc = [loc(h) for h in live(s, "ugc_features")[:3]] +[x["id"] for x in sdks if "ugc" in x["categories"] and not x["dev_only"]]
+        if ugc and not live(s, "ugc_moderation"):
+            check(c, "PLAY_UGC_SAFEGUARDS_NOT_FOUND", "attention", "User-generated content without report or block code; Play requires terms, in-app reporting, blocking and moderation",
+                  ugc, G + "#user-generated-content")
+        for rid, cid, msg, anchor in (
+                ("interstitial_show", "PLAY_AD_PLACEMENT_REVIEW", "Interstitials shown here; check none appear unexpectedly (launch, splash, mid-task) and each can be closed", "#ads"),
+                ("payments_external", "PLAY_PAYMENTS_REVIEW", "External payment code; digital goods and features must use Play Billing unless an exception or regional program applies", "#payments-and-subscriptions"),
+                ("restricted_category", "PLAY_RESTRICTED_CATEGORY_REVIEW", "Wording suggests a restricted category (gambling, loans, crypto); read that policy and check what it requires", "#restricted-content")):
+            if live(s, rid):
+                check(c, cid, "info", msg, [loc(h) for h in live(s, rid)[:4]], G + anchor)
 
     account = live(s, "auth_signup") + live(s, "social_login") + live(s, "phone_auth")
     if account or cats & {"auth"}:
@@ -1383,7 +1461,7 @@ def build_checks(s, sdks, apple_sdks, plats, caps):
         if not live(s, "account_deletion"):
             check(c, "ACCOUNT_DELETION_NOT_FOUND", "attention", "Account creation/auth found but no account-deletion code path; Apple 5.1.1(v) and Google Play require in-app deletion (Play also a web link)",
                   ev, A + "#account-deletion")
-        check(c, "REVIEWER_ACCESS", "info", "Login detected: provide a demo account or review instructions (Apple 2.1, Play App access)", ev[:2], A + "#review-access")
+        check(c, "REVIEWER_ACCESS", "info", "Login detected: provide a working demo account or review instructions (Apple 2.1, Play Sign-in details)", ev[:2], A + "#review-access")
     if not live(s, "privacy_policy_link") and not any("privacy" in u.lower() for e in s.endpoints.values() for u in e["urls"]):
         check(c, "PRIVACY_POLICY_LINK_NOT_FOUND", "attention", "No privacy policy link/screen found in code; both stores require a privacy policy URL and Apple requires an in-app link",
               [], A + "#privacy-policy")
@@ -1393,9 +1471,13 @@ def build_checks(s, sdks, apple_sdks, plats, caps):
         check(c, "CLEARTEXT_ENDPOINTS", "attention", "http:// or ws:// endpoints (unencrypted in transit; affects Data safety 'encrypted in transit')", http_eps[:8])
     for rid, cid, msg in (("pii_logging", "PII_IN_LOGS", "Personal data or credentials may be written to logs"),
                           ("insecure_storage", "TOKENS_IN_PLAIN_STORAGE", "Tokens/credentials may be stored in unencrypted storage; prefer Keychain/Keystore/SecureStore"),
-                          ("webview_bridge", "WEBVIEW_BRIDGE", "WebView JavaScript bridge/settings that widen attack surface")):
+                          ("insecure_tls", "TLS_VALIDATION_DISABLED", "Certificate or hostname validation appears to be disabled; Play rejects apps with insecure TLS handling"),
+                          ("dynamic_code", "DYNAMIC_CODE_LOADING", "Code loaded at runtime; Play forbids downloading executable code from outside Google Play, so confirm the source"),
+                          ("webview_bridge", "WEBVIEW_BRIDGE", "WebView JavaScript bridge/settings that widen attack surface"),
+                          ("placeholder_content", "PLACEHOLDER_CONTENT", "Placeholder text in the app; check for unfinished screens before submitting")):
         if live(s, rid):
-            check(c, cid, "attention" if rid != "webview_bridge" else "info", msg, [loc(h) for h in live(s, rid)[:5]], "references/security-and-scanning.md")
+            check(c, cid, "info" if rid in ("webview_bridge", "placeholder_content") else "attention", msg,
+                  [loc(h) for h in live(s, rid)[:5]], "references/security-and-scanning.md")
     replay = [x["id"] for x in sdks if "session_replay" in x["categories"] and not x["dev_only"]]
     if replay:
         check(c, "SESSION_REPLAY_SDK", "attention", "Session replay / screen recording SDKs can capture user content; mask sensitive views and disclose", replay)
@@ -1417,6 +1499,21 @@ def build_checks(s, sdks, apple_sdks, plats, caps):
               tracking_sdks[:5], "references/consent.md")
     order = {"attention": 0, "info": 1}
     return sorted(c, key=lambda x: order.get(x["status"], 2))
+
+
+def release_optimization_off(s):
+    """Release optimization settings that resolve to off. Expo config wins because it regenerates android/."""
+    off = []
+    entries = s.platform["release_optimization"]
+    for e in entries:
+        key = next(k for flag, _rx, k in RELEASE_FLAGS if flag == e["flag"])
+        on = s.expo_build_flags.get(key, s.gradle_props.get(e["prop"], e["value"])) if e["prop"] else e["value"]
+        if on is False:
+            off.append("%s off (%s:%s)" % (e["flag"], e["path"], e["line"]))
+    if not entries and "expo" in s.frameworks:
+        off += ["%s off by default (set %s in expo-build-properties)" % (flag, key)
+                for flag, _rx, key in RELEASE_FLAGS if not s.expo_build_flags.get(key)]
+    return off
 
 
 def env_ignored(s, rel):
@@ -1448,6 +1545,9 @@ def fingerprint(root, max_files):
         except OSError:
             continue
         h.update(("%s|%d|%d\n" % (f.rel, st.st_size, st.st_mtime_ns)).encode())
+    merged = find_merged_manifest(root)  # build/ is outside the walk, so a new build must invalidate the cache itself
+    for extra in ([merged] if merged else []) + listing_files(root):
+        h.update(str(extra.stat().st_mtime_ns).encode())
     for own in (HERE / "sdk_catalog.json", Path(__file__)):  # scanner or catalog changes invalidate the cache
         try:
             h.update(own.read_bytes())
@@ -1489,7 +1589,87 @@ def run_scan(root, max_files=MAX_FILES, snippets=False):
     return s
 
 
+def find_merged_manifest(root):
+    """Newest release merged manifest left by an earlier build (never builds one); None if there isn't one."""
+    root = Path(root)
+    tail = "intermediates/merged_manifest*/*[rR]elease*/**/AndroidManifest.xml"
+    real_root = os.path.join(os.path.realpath(str(root)), "")
+    found = [p for pattern in ("*/build/" + tail, "android/*/build/" + tail, "build/*/" + tail) for p in root.glob(pattern)
+             if p.is_file() and os.path.join(os.path.realpath(str(p)), "").startswith(real_root) and p.stat().st_size <= MAX_FILE_BYTES]
+    return max(found, key=lambda p: p.stat().st_mtime_ns) if found else None
+
+
+def apply_merged_manifest(s, root):
+    """Add what dependencies merge into the release manifest; source manifests can't show these."""
+    path = find_merged_manifest(root)
+    if not path:
+        return
+    root = Path(root)
+    rel = path.relative_to(root).as_posix()
+    data = path.read_bytes()
+    try:
+        manifest = ET.fromstring(data)
+    except ET.ParseError as e:
+        s.parse_error(rel, e)
+        return
+    text = data.decode("utf-8", "replace")
+    f = F(str(path), rel, path.name, ".xml", "config", len(data))
+    declared = {p["name"] for p in s.android_perms if not p["removed"] and not p["debug_only"]}
+    added = []
+    for el in manifest.iter():
+        name = el.get(ANS + "name") or ""
+        if el.tag in ("uses-permission", "uses-permission-sdk-23") and name not in declared \
+                and not name.endswith("DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"):
+            declared.add(name)
+            add_android_perm(s, f, text, name, False, el.get(ANS + "maxSdkVersion"), True)
+            s.android_perms[-1]["merged"] = True
+            added.append(strip_android(name))
+    application = manifest.find("application")
+    for attr in ("usesCleartextTraffic", "debuggable"):
+        if application is not None and (application.get(ANS + attr) or "").lower() == "true":
+            s.platform["cleartext"].append("%s:%s %s=true (release build)" % (rel, line_of(text, attr), attr))
+    sdk = manifest.find("uses-sdk")
+    target = sdk.get(ANS + "targetSdkVersion") if sdk is not None else None
+    inputs = [root / n for n in ("app.json", "app.config.ts", "app.config.js", "package.json")] + [root / m for m in s.platform["android_manifests"]]
+    built = path.stat().st_mtime_ns
+    s.platform["merged_manifest"] = {
+        "path": rel, "added_permissions": added[:40], "target_sdk": int(target) if target and target.isdigit() else None,
+        "target_sdk_line": line_of(text, "targetSdkVersion"), "stale": any(p.is_file() and p.stat().st_mtime_ns > built for p in inputs)}
+
+
+LISTING_LIMITS = {"title.txt": 30, "short_description.txt": 80, "full_description.txt": 4000}
+LISTING_CLAIMS = R(r"#\s?1\b|app of the year|editor'?s choice|best of play|\bbest\b[^.\n]*\bever\b|\d+\s?% off|free for (?:a )?limited time|cash ?back", re.I)
+LISTING_EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿]")
+
+
+def listing_files(root):
+    """Fastlane listing text; free-form listing documents are left for Claude to read."""
+    return [p for base in ("fastlane/metadata/android", "android/fastlane/metadata/android")
+            for p in sorted((Path(root) / base).glob("*/*.txt"))
+            if p.name in LISTING_LIMITS and p.is_file() and not p.is_symlink() and p.stat().st_size <= MAX_FILE_BYTES]
+
+
+def apply_store_listing(s, root):
+    files = listing_files(root)
+    if not files:
+        return
+    problems = []
+    for p in files:
+        rel = p.relative_to(root).as_posix()
+        text = p.read_text(encoding="utf-8", errors="replace").strip()
+        if len(text) > LISTING_LIMITS[p.name]:
+            problems.append("%s over the %d character limit (%d)" % (rel, LISTING_LIMITS[p.name], len(text)))
+        claim = LISTING_CLAIMS.search(text)
+        if claim:
+            problems.append("%s: prohibited claim %r" % (rel, claim.group(0)[:40]))
+        if p.name == "title.txt" and (LISTING_EMOJI.search(text) or (text.isupper() and len(text) > 4)):
+            problems.append("%s: emoji or ALL CAPS in the title" % rel)
+    s.platform["store_listing"] = {"files": len(files), "problems": problems[:12]}
+
+
 def assemble(s, root):
+    apply_merged_manifest(s, root)
+    apply_store_listing(s, root)
     # gitignored android/ or ios/ folders are generated (e.g. by `expo prebuild`) and may be stale vs the app config
     s.coverage["generated_native_dirs"] = [
         d for d in ("android", "ios") if (Path(root) / d).is_dir()
@@ -1541,7 +1721,7 @@ def summarize(full, detail_rel, cached=False):
         "sdks": ["%s [%s]%s%s" % (x["id"], ",".join(x["categories"]), "" if x["direct"] else " transitive",
                                   " dev-only" if x["dev_only"] else "") for x in full["sdks"][:40]],
         "permissions": {
-            "android": sorted({strip_android(p["name"]) + (" (removed)" if p["removed"] else " (debug)" if p["debug_only"] else "")
+            "android": sorted({strip_android(p["name"]) + (" (removed)" if p["removed"] else " (debug)" if p["debug_only"] else " (from SDK)" if p.get("merged") else "")
                                for p in perms["android"]})[:40],
             "ios": sorted({"%s%s" % (k["key"], "" if k["status"] == "ok" else " [%s]" % k["status"]) for k in perms["ios"]})[:30]},
         "endpoints": ["%s%s x%d%s" % (e["host"], " (%s)" % e["vendor"] if e["vendor"] else "", e["count"],
@@ -1560,7 +1740,8 @@ def summarize(full, detail_rel, cached=False):
                      "minified_skipped": len(cov["minified_skipped"]), "parse_errors": cov["parse_errors"][:5],
                      "file_limit_hit": cov["file_limit_hit"], "truncated_rules": cov["truncated_rules"],
                      "test_context_hits_excluded": cov["test_context_hits"],
-                     "generated_native_dirs": cov.get("generated_native_dirs", [])},
+                     "generated_native_dirs": cov.get("generated_native_dirs", []),
+                     "merged_release_manifest": full["platform_config"]["merged_manifest"]},
     }
 
 

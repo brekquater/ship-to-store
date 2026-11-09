@@ -145,6 +145,7 @@ Abridged summary output:
 | "Data safety answers" | `google-play-data-safety.md` |
 | "App Privacy answers" | `app-store-disclosures.md` |
 | "privacy policy" | `privacy-policy-draft.md`, marked DRAFT, with `[TO CONFIRM: …]` for unknown facts |
+| "policy matrix" | `google-play-policy-matrix.md`: every Play policy area with status and evidence |
 | "consent plan", "SDK list", "checklist", "data inventory" | the matching file |
 
 Files go to `ship-to-store-report/` (or wherever you say). Claude offers to gitignore that folder.
@@ -164,7 +165,7 @@ Documents that still contain `[TO CONFIRM: …]` are marked **INCOMPLETE** and n
 | .NET MAUI | `.csproj` (PackageReference, UseMaui), platform manifests |
 | Web apps | `package.json` frameworks, source, endpoints (store checks don't apply) |
 
-The SDK catalog (`scripts/sdk_catalog.json`) covers 76 common analytics, ads, attribution, crash, session-replay, auth, payments, push, maps, storage, media, consent and AI SDKs. It also includes Apple's list of SDKs that require privacy manifests (checked 2026-11-03).
+The SDK catalog (`scripts/sdk_catalog.json`) covers 77 common analytics, ads, attribution, crash, session-replay, auth, payments, push, maps, storage, media, consent and AI SDKs. It also includes Apple's list of SDKs that require privacy manifests (checked 2026-11-03).
 
 ## Run the scanner directly
 
